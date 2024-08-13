@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Music Player</title>
+	<style>
+		.player {
+			width: 400px;
+			background-color: #f2f2f2;
+			padding: 20px;
+			border-radius: 10px;
+			box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+			font-family: Arial, sans-serif;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+		}
+		.controls {
+			display: flex;
+			justify-content: center;
+			margin-bottom: 10px;
+		}
+		.controls button {
+			background-color: #4CAF50;
+			color: white;
+			border: none;
+			padding: 10px 20px;
+			text-align: center;
+			text-decoration: none;
+			display: inline-block;
+			font-size: 16px;
+			margin: 4px 2px;
+			cursor: pointer;
+			border-radius: 4px;
+		}
+		.progress-bar {
+			width: 100%;
+			height: 20px;
+			background-color: #ddd;
+			border-radius: 10px;
+			overflow: hidden;
+			margin-bottom: 10px;
+			position: relative;
+			cursor: pointer;
+		}
+		.progress {
+			width: 0%;
+			height: 100%;
+			background-color: #4CAF50;
+			transition: width 0.1s ease;
+		}
+		.drag-handle {
+			width: 16px;
+			height: 16px;
+			background-color: #fff;
+			border: 2px solid #4CAF50;
+			border-radius: 50%;
+			position: absolute;
+			top: 50%;
+			transform: translate(-50%, -50%);
+			cursor: grab;
+		}
+		.drag-handle.dragging {
+			cursor: grabbing;
+		}
+		.time-display {
+			font-size: 16px;
+			font-weight: bold;
+		}
+	</style>
+</head>
+<body>
+	<div class="player">
+		<div class="controls">
+			<button id="playPauseBtn">Play</button>
+			<select id="speedControl">
+				<option value="0.25">0.25x</option>
+				<option value="0.5">0.5x</option>
+				<option value="1" selected>1x</option>
+				<option value="2">2x</option>
+			</select>
+		</div>
+		<div class="progress-bar">
+			<div class="progress"></div>
+			<div class="drag-handle"></div>
+		</div>
+		<div class="time-display">
+			<span id="currentTime">0:00</span> / <span id="duration">0:00</span>
+		</div>
+		<audio id="audioPlayer" src="https://samplelib.com/lib/preview/mp3/sample-3s.mp3"></audio>
+	</div>
+
+	<script>
+		const audioPlayer = document.getElementById('audioPlayer');
+		const playPauseBtn = document.getElementById('playPauseBtn');
+		const speedControl = document.getElementById('speedControl');
+		const progressBar = document.querySelector('.progress-bar');
+		const progress = document.querySelector('.progress');
+		const dragHandle = document.querySelector('.drag-handle');
+		const currentTimeDisplay = document.getElementById('currentTime');
+		const durationDisplay = document.getElementById('duration');
+
+		let isPlaying = false;
+		let isDragging = false;
+
+		playPauseBtn.addEventListener('click', togglePlayPause);
+		speedControl.addEventListener('change', changePlaybackRate);
+		audioPlayer.addEventListener('loadedmetadata', initializePlayer);
+		audioPlayer.addEventListener('timeupdate', updateProgressBar);
+		progressBar.addEventListener('mousedown', startDragging);
+		document.addEventListener('mousemove', drag);
+		document.addEventListener('mouseup', stopDragging);
+
+		function togglePlayPause() {
+			if (isPlaying) {
+				audioPlayer.pause();
+				playPauseBtn.textContent = 'Play';
+			} else {
+				audioPlayer.play();
+				playPauseBtn.textContent = 'Stop';
+			}
+			isPlaying = !isPlaying;
+		}
+
+		function changePlaybackRate() {
+			audioPlayer.playbackRate = speedControl.value;
+		}
+
+		function initializePlayer() {
+			updateTimeDisplay(0, audioPlayer.duration);
+			updateProgressBar();
+		}
+
+		function updateProgressBar() {
+			const currentTime = audioPlayer.currentTime;
+			const duration = audioPlayer.duration;
+			const progress = (currentTime / duration) * 100;
+			document.querySelector('.progress').style.width = `${progress}%`;
+			dragHandle.style.left = `${progress}%`;
+			updateTimeDisplay(currentTime, duration);
+		}
+
+		function updateTimeDisplay(currentTime, duration) {
+			const formattedCurrentTime = formatTime(currentTime);
+			const formattedDuration = formatTime(duration);
+			currentTimeDisplay.textContent = formattedCurrentTime;
+			durationDisplay.textContent = formattedDuration;
+		}
+
+		function formatTime(time) {
+			const minutes = Math.floor(time / 60);
+			const seconds = Math.floor(time % 60);
+			return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+		}
+
+		function startDragging(e) {
+			isDragging = true;
+			audioPlayer.pause();
+			dragHandle.classList.add('dragging');
+			drag(e);
+		}
+
+		function drag(e) {
+			if (!isDragging) return;
+			const progressBarRect = progressBar.getBoundingClientRect();
+			const clickX = e.clientX - progressBarRect.left;
+			const progressBarWidth = progressBarRect.width;
+			const progress = (clickX / progressBarWidth) * 100;
+			document.querySelector('.progress').style.width = `${progress}%`;
+			const currentTime = (progress / 100) * audioPlayer.duration;
+			updateTimeDisplay(currentTime, audioPlayer.duration);
+			dragHandle.style.left = `${progress}%`;
+		}
+
+		function stopDragging() {
+			if (!isDragging) return;
+			const progressWidth = parseFloat(document.querySelector('.progress').style.width);
+			const currentTime = (progressWidth / 100) * audioPlayer.duration;
+			audioPlayer.currentTime = currentTime;
+			if (isPlaying) {
+				audioPlayer.play();
+			}
+			isDragging = false;
+			dragHandle.classList.remove('dragging');
+		}
+	</script>
+</body>
+</html>
